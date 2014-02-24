@@ -2,6 +2,7 @@
 using System.IO;
 using System.Collections.Generic;
 using System.Text;
+using System.Drawing;
 
 namespace PALReader
 {
@@ -16,7 +17,13 @@ namespace PALReader
     /// version number (always 00 03) (2 bytes)
     /// number of colors in the image (2 bytes)
     /// 
+    /// Then colors come in RGBA come in 4 bytes
+    /// 
     /// Info taken from http://willperone.net/Code/codereadingpal.php
+    /// 
+    /// NOTE: Alpha representation in the Color object is inverse of that in PAL, ie
+    ///       0 in PAL is 255 in Color.
+    ///       This conversion is done in the code.
     /// </summary>
     public class PalReader
     {
@@ -33,7 +40,7 @@ namespace PALReader
         /// <summary>
         /// Color palette.
         /// </summary>
-        public List<RGBA> palette { get; private set; }
+        public List<Color> palette { get; private set; }
 
         public PalReader(string fileName)
         {
@@ -50,14 +57,15 @@ namespace PALReader
                 version = BitConverter.ToInt16(new byte[2] { header[21], header[20] }, 0);
                 colors = BitConverter.ToInt16(new byte[2] { header[22], header[23] }, 0);
 
-                palette = new List<RGBA>();
+                palette = new List<Color>();
                 byte[] rgbaColor = new byte[4];
                 while (fs.Position < fs.Length)
                 {
                     fs.Read(rgbaColor, 0, 4);
-                    RGBA rgba = new RGBA(rgbaColor[0], rgbaColor[1], rgbaColor[2], rgbaColor[3]);
+                    // Alpha is inverted
+                    Color color = Color.FromArgb(255 - rgbaColor[3], rgbaColor[0], rgbaColor[1], rgbaColor[2]);
 
-                    palette.Add(rgba);
+                    palette.Add(color);
                 }
             }
             finally
@@ -70,9 +78,9 @@ namespace PALReader
         {
             StringBuilder sb = new StringBuilder();
             
-            foreach(RGBA color in palette)
+            foreach(Color color in palette)
             {
-                sb.AppendLine(string.Format("{0:000}, {1:000}, {2:000}, {3:000}", color.Red, color.Green, color.Blue, color.Alpha));
+                sb.AppendLine(string.Format("{0:000}, {1:000}, {2:000}, {3:000}", color.R, color.G, color.B, color.A));
             }
 
             return sb.ToString();
